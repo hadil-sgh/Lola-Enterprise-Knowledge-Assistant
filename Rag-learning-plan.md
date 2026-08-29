@@ -1,6 +1,5 @@
 # Build-to-Learn: Enterprise Knowledge Assistant (RAG) — 6 Hour Plan
 
-**Goal:** By the end you'll understand every stage of a production-grade RAG pipeline (not just call `.from_documents()` and hope) — and you'll have a working local app: ingest docs → hybrid retrieval → rerank → grounded, cited answers → FastAPI + chat UI.
 
 **Philosophy:** We build most of the pipeline in *plain Python* first (no LangChain) so you actually see what's happening at each step — chunking, embedding, indexing, scoring, prompting. LangChain is a wrapper around exactly these ideas; once you've built it raw, the abstraction stops feeling like magic. Docker comes last, only if time allows.
 
