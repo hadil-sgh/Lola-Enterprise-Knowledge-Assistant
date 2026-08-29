@@ -1,0 +1,7 @@
+sentence-transformers
+faiss-cpu
+rank_bm25
+fastapi
+uvicorn
+pypdf
+numpy
