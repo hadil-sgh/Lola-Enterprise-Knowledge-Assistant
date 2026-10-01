@@ -1,0 +1,25 @@
+EMPLOYEE HANDBOOK - LOLA ENTERPRISE
+
+SECTION 1: REMOTE WORK POLICY
+
+Lola Enterprise employees may work remotely up to three days per week, subject to manager approval. Employees working remotely must be reachable during core hours, which are 10:00 AM to 4:00 PM in their local timezone. Remote work requests are tracked under internal policy code HR-4471. Employees who wish to work remotely full-time must submit a formal request to Human Resources at least four weeks in advance, and approval is granted on a case-by-case basis depending on role and team needs.
+
+SECTION 2: EXPENSE REIMBURSEMENT
+
+All business-related expenses must be submitted through the internal expense portal within 30 days of the purchase date. Expenses under $50 do not require a manager's pre-approval, but expenses above $50 require written approval before the purchase is made. Reimbursements are typically processed within 10 business days. Travel expenses, including flights and hotels, should be booked through the corporate travel system whenever possible to take advantage of negotiated rates.
+
+SECTION 3: PRODUCT SUPPORT - LOLA CONNECT HARDWARE
+
+The Lola Connect hub, internally referred to by product code SKU-2291, is the company's flagship IoT gateway device. It ships with a 2-year limited warranty covering manufacturing defects. Customers experiencing connectivity issues with SKU-2291 should first attempt a factory reset by holding the reset button for 10 seconds. If the issue persists, support tickets should be escalated to the Hardware Support team, not the general helpdesk. Replacement units for SKU-2291 are typically shipped within 5 business days of an approved warranty claim.
+
+SECTION 4: VACATION AND LEAVE
+
+Full-time employees accrue 15 days of paid vacation per year during their first two years of employment, increasing to 20 days after two years of service. Vacation requests should be submitted at least two weeks in advance through the HR portal. Unused vacation days may be carried over into the next calendar year, up to a maximum of 5 days. Sick leave is separate from vacation and is not capped, though extended absences of more than 5 consecutive days require a doctor's note.
+
+SECTION 5: CODE OF CONDUCT
+
+Employees are expected to act with integrity and professionalism in all interactions with colleagues, customers, and partners. Harassment of any kind will not be tolerated and should be reported immediately to Human Resources or through the anonymous ethics hotline. Conflicts of interest, including outside employment that competes with Lola Enterprise's business, must be disclosed to a manager in writing.
+
+SECTION 6: IT AND SECURITY POLICY
+
+All company laptops must have full-disk encryption enabled and are managed centrally through the IT device management system. Employees must not install unauthorized software on company devices. Multi-factor authentication is required for all internal systems, including email, the HR portal, and the expense portal. Any suspected security incident, such as a phishing email or lost device, must be reported to the IT Security team within 24 hours, referencing incident policy code SEC-1090.
