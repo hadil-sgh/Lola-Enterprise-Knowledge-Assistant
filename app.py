@@ -25,12 +25,9 @@ from pydantic import BaseModel, Field
 
 from generate import DEFAULT_MODEL, NOT_FOUND, list_models, stream_answer
 from ingest import DATA_DIR, INDEX_DIR, ingest
-from retrieve import MODES, Retriever, get_reranker
+from retrieve import MODES, Retriever, get_reranker, is_relevant
 
 FRONTEND = Path("Frontend/chat.html")
-# With the reranker on, an off-topic question scores ~0.00 on every chunk while a
-# relevant one scores 0.2-1.0: below this we skip the LLM and answer "not found".
-MIN_RELEVANCE = 0.02
 
 state: dict = {"retriever": None}
 
@@ -114,8 +111,7 @@ def chat(req: ChatRequest):
             chunks = retriever.search(req.question, req.top_k, req.mode)
             yield ndjson({"type": "sources", "mode": req.mode, "sources": [public_source(c) for c in chunks]})
 
-            best = max((c["scores"]["rerank"] or 0.0 for c in chunks), default=0.0)
-            if not chunks or (req.mode == "hybrid+rerank" and best < MIN_RELEVANCE):
+            if not is_relevant(chunks, req.mode):
                 yield ndjson({"type": "token", "text": NOT_FOUND})
                 yield ndjson({"type": "done", "gated": True})
                 return

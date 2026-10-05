@@ -24,6 +24,9 @@ RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 CANDIDATES = 20   # retrieve wide ...
 RRF_K = 60        # standard Reciprocal Rank Fusion damping constant
 MODES = ("dense", "bm25", "hybrid", "hybrid+rerank")  # ... then narrow down to top_k
+# With the reranker on, an off-topic question scores ~0.00 on every chunk while a
+# relevant one scores 0.2-1.0: below this we skip the LLM and answer "not found".
+MIN_RELEVANCE = 0.02
 
 _reranker: CrossEncoder | None = None
 
@@ -47,6 +50,15 @@ def rrf(rankings: list[list[int]], k: int = RRF_K) -> list[tuple[int, float]]:
         for rank, chunk_id in enumerate(ranking, start=1):
             fused[chunk_id] = fused.get(chunk_id, 0.0) + 1.0 / (k + rank)
     return sorted(fused.items(), key=lambda kv: kv[1], reverse=True)
+
+
+def is_relevant(chunks: list[dict], mode: str) -> bool:
+    """Relevance gate. Only the reranker's scores are calibrated enough to judge this."""
+    if not chunks:
+        return False
+    if mode != "hybrid+rerank":
+        return True
+    return max(c["scores"]["rerank"] or 0.0 for c in chunks) >= MIN_RELEVANCE
 
 
 class Retriever:
