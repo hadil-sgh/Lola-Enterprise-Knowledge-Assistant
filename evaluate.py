@@ -25,6 +25,7 @@ from pathlib import Path
 from langchain_ollama import ChatOllama
 
 from generate import DEFAULT_MODEL, NOT_FOUND, OLLAMA_HOST, list_models, stream_answer
+from ingest import INDEX_DIR
 from retrieve import MODES, Retriever, is_relevant
 
 EVAL_DIR = Path("eval")
@@ -266,13 +267,19 @@ def main() -> None:
         p.add_argument("--model", default=DEFAULT_MODEL, help="Ollama model that writes the answers")
         p.add_argument("--judge", default=JUDGE_MODEL, help="Ollama model that grades them")
         p.add_argument("--limit", type=int, help="only the first N questions (answers)")
+    for p in sub.choices.values():
+        p.add_argument("--index-dir", type=Path, default=INDEX_DIR, help="which index to evaluate")
     args = parser.parse_args()
 
-    retriever = Retriever()
+    retriever = Retriever(args.index_dir)
+    print(f"Index: {args.index_dir}/  ({retriever.chunking or 'unknown'} chunking, {len(retriever.chunks)} chunks)\n")
     if args.command == "check":
         sys.exit(0 if cmd_check(retriever) else 1)
 
-    out: dict = {"created": datetime.now().isoformat(timespec="seconds")}
+    out: dict = {
+        "created": datetime.now().isoformat(timespec="seconds"),
+        "index": {"dir": str(args.index_dir), "chunking": retriever.chunking, "chunks": len(retriever.chunks)},
+    }
     if args.command in ("retrieval", "all"):
         print("Level 2: measuring retrieval")
         out["retrieval"] = cmd_retrieval(retriever, args.modes)

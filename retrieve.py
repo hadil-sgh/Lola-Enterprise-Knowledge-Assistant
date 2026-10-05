@@ -72,12 +72,15 @@ class Retriever:
         # chunk_id == list position, which is also the BM25 corpus position
         self.chunks: list[dict] = json.loads((index_dir / "chunks.json").read_text(encoding="utf-8"))
         self.bm25 = BM25Okapi([tokenize(c["text"]) for c in self.chunks])
+        meta_file = index_dir / "index_meta.json"
+        self.chunking = json.loads(meta_file.read_text(encoding="utf-8")).get("chunking") if meta_file.exists() else None
 
     @property
     def stats(self) -> dict:
         return {
             "chunks": len(self.chunks),
             "files": sorted({c["metadata"]["source"] for c in self.chunks}),
+            "chunking": self.chunking,
         }
 
     def _dense(self, query: str, n: int) -> list[tuple[int, float]]:

@@ -3,11 +3,20 @@ Ingestion pipeline (offline / batch):
     Data/*.pdf|*.txt -> pages -> chunks (+metadata) -> embeddings -> FAISS index
 
 Run once, or whenever the documents change -- never per user question.
+
+    python -X utf8 ingest.py                                   # recursive chunks -> index_store/
+    python -X utf8 ingest.py --chunking semantic --out index_semantic
+
+Environment: CHUNKING (recursive | semantic) and INDEX_DIR set the defaults used by the API.
 """
+import argparse
 import json
+import os
 import re
+import statistics
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
@@ -15,12 +24,12 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from chunking import STRATEGIES, chunk_pages
 
 DATA_DIR = Path("Data")
-INDEX_DIR = Path("index_store")
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200
+INDEX_DIR = Path(os.getenv("INDEX_DIR", "index_store"))
+CHUNKING = os.getenv("CHUNKING", "recursive")
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 # "Chapter 2 . . . . . . . . 17" style dotted leaders found in tables of contents
@@ -59,26 +68,29 @@ def load_pages(data_dir: Path = DATA_DIR) -> tuple[list[Document], int]:
     return pages, skipped
 
 
-def split_pages(pages: list[Document]) -> list[Document]:
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP, add_start_index=True
-    )
-    chunks = splitter.split_documents(pages)
-    for i, chunk in enumerate(chunks):
-        chunk.metadata["chunk_id"] = i
-    return chunks
+def chunk_stats(chunks: list[Document]) -> dict:
+    sizes = [len(c.page_content) for c in chunks]
+    return {
+        "chunks": len(chunks),
+        "chars_mean": round(statistics.mean(sizes)),
+        "chars_median": round(statistics.median(sizes)),
+        "chars_min": min(sizes),
+        "chars_max": max(sizes),
+    }
 
 
-def ingest(data_dir: Path = DATA_DIR, index_dir: Path = INDEX_DIR) -> dict:
+def ingest(data_dir: Path = DATA_DIR, index_dir: Path = INDEX_DIR, chunking: str = CHUNKING) -> dict:
+    if chunking not in STRATEGIES:
+        raise RuntimeError(f"chunking must be one of {STRATEGIES}, got '{chunking}'")
     start = time.time()
     pages, skipped = load_pages(data_dir)
     if not pages:
         raise RuntimeError(f"No usable .pdf/.txt content found in {data_dir}/")
-    chunks = split_pages(pages)
 
-    store = FAISS.from_documents(
-        chunks, get_embeddings(), distance_strategy=DistanceStrategy.MAX_INNER_PRODUCT
-    )
+    embeddings = get_embeddings()  # loaded once: semantic chunking and indexing both need it
+    chunks = chunk_pages(pages, chunking, embeddings)
+
+    store = FAISS.from_documents(chunks, embeddings, distance_strategy=DistanceStrategy.MAX_INNER_PRODUCT)
     index_dir.mkdir(exist_ok=True)
     store.save_local(str(index_dir))
 
@@ -91,21 +103,27 @@ def ingest(data_dir: Path = DATA_DIR, index_dir: Path = INDEX_DIR) -> dict:
         ),
         encoding="utf-8",
     )
-    return {
+    result = {
         "files": sorted({p.metadata["source"] for p in pages}),
         "pages_indexed": len(pages),
         "pages_skipped": skipped,
-        "chunks": len(chunks),
+        "chunking": chunking,
+        **chunk_stats(chunks),
         "seconds": round(time.time() - start, 1),
     }
+    (index_dir / "index_meta.json").write_text(
+        json.dumps({**result, "created": datetime.now().isoformat(timespec="seconds")}, indent=2),
+        encoding="utf-8",
+    )
+    return result
 
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
-    pages, skipped = load_pages()
-    chunks = split_pages(pages)
-    print(f"Loaded {len(pages)} pages ({skipped} skipped as blank / table-of-contents)")
-    print(f"Divided into {len(chunks)} chunks")
-    print(f"First chunk:\n\n{chunks[0]}\n")
-    print("Embedding + indexing ...")
-    print(ingest())
+    parser = argparse.ArgumentParser(description="Build the FAISS index from Data/")
+    parser.add_argument("--chunking", choices=STRATEGIES, default=CHUNKING)
+    parser.add_argument("--out", type=Path, default=INDEX_DIR, help="index directory")
+    args = parser.parse_args()
+    print(f"Embedding + indexing with {args.chunking} chunking -> {args.out}/ ...")
+    for key, value in ingest(index_dir=args.out, chunking=args.chunking).items():
+        print(f"  {key:<13} {value}")
