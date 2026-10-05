@@ -1,0 +1,156 @@
+[
+  {
+    "id": "q01", "type": "lookup", "answerable": true,
+    "question": "Who supervised the project, both academically and at the company?",
+    "relevant_pages": [1, 4],
+    "evidence": ["Sonia Batis", "Noura Lahbib"],
+    "reference_answer": "The academic supervisor was Ms. Sonia Batis and the corporate (Ooredoo) internship supervisor was Ms. Noura Lahbib."
+  },
+  {
+    "id": "q02", "type": "numeric", "answerable": true,
+    "question": "Which company hosted the project and roughly how many subscribers does its Tunisian branch serve?",
+    "relevant_pages": [17],
+    "evidence": ["Ooredoo Tunisia", "8 million subscribers"],
+    "reference_answer": "The host organization is Ooredoo Tunisia, a major telecommunications operator serving approximately 8 million subscribers."
+  },
+  {
+    "id": "q03", "type": "synthesis", "answerable": true,
+    "question": "Which project management methodology was used and why was it chosen?",
+    "relevant_pages": [21, 22],
+    "evidence": ["Scrum was selected for its simplicity", "adapt to complex, evolving requirements"],
+    "reference_answer": "Scrum was used. It was selected for its simplicity and its ability to adapt to complex, evolving requirements, offering high flexibility and adaptability, rapid response to change through short iterations, and a practical alignment between theoretical planning and real-world development."
+  },
+  {
+    "id": "q04", "type": "synthesis", "answerable": true,
+    "question": "What are the main technological components of the AgentPortal platform?",
+    "relevant_pages": [20, 21],
+    "evidence": ["Faster Whisper", "SpeechBrain", "Churn Prediction", "Spring Boot backend and Angular"],
+    "reference_answer": "Real-time speech-to-text and sentiment analysis (Faster Whisper for transcription, SpeechBrain for speaker diarization, and Vader and harshit345 models for sentiment); agent performance tracking and complaint detection using LLaMA-based language models; a machine-learning churn prediction API; and the platform itself, built with a Spring Boot backend and an Angular frontend."
+  },
+  {
+    "id": "q05", "type": "synthesis", "answerable": true,
+    "question": "What architecture does the platform follow and what does each layer do?",
+    "relevant_pages": [34, 35],
+    "evidence": ["three-tier architecture", "Churn Prediction", "Post-Call Analysis", "Real-Time Audio Processing"],
+    "reference_answer": "A three-tier architecture: an Angular front-end client that manages user interaction, a Spring Boot backend that holds the core logic, talks to the database and calls external Flask APIs (churn prediction, post-call analysis, real-time audio processing), and a PostgreSQL database for data storage and retrieval."
+  },
+  {
+    "id": "q06", "type": "numeric", "answerable": true,
+    "question": "How many customer records and features does the churn dataset contain?",
+    "relevant_pages": [45],
+    "evidence": ["7,043 customer records", "21 features"],
+    "reference_answer": "The dataset contains 7,043 customer records with 21 features."
+  },
+  {
+    "id": "q07", "type": "lookup", "answerable": true,
+    "question": "How was the class imbalance in the churn data handled?",
+    "relevant_pages": [49, 50],
+    "evidence": ["SMOTE", "4,142 samples"],
+    "reference_answer": "With SMOTE (Synthetic Minority Over-sampling Technique), which creates new minority-class samples by interpolating between existing ones. After applying it, both classes had 4,142 samples."
+  },
+  {
+    "id": "q08", "type": "numeric", "answerable": true,
+    "question": "What train/test split was used to train the churn model?",
+    "relevant_pages": [50, 51],
+    "evidence": ["80% (5,634 samples)", "20% (1,409 samples)", "Stratified sampling"],
+    "reference_answer": "80% for training (5,634 samples) and 20% for testing (1,409 samples), using stratified sampling so the class distribution was preserved in both subsets."
+  },
+  {
+    "id": "q09", "type": "synthesis", "answerable": true,
+    "question": "Which churn model performed best, and how was it optimised?",
+    "relevant_pages": [51, 52, 53, 61],
+    "evidence": ["Random Forest", "Optuna", "Bayesian"],
+    "reference_answer": "The Random Forest model (compared against a Decision Tree and XGBoost) gave the best performance, and it was tuned with Bayesian hyperparameter optimization using Optuna."
+  },
+  {
+    "id": "q10", "type": "lookup", "answerable": true,
+    "question": "What endpoints does the churn prediction Flask API expose?",
+    "relevant_pages": [53],
+    "evidence": ["/health", "/predict"],
+    "reference_answer": "Two endpoints: /health returns the health status of the API, and /predict accepts customer data via a POST request and returns the churn prediction, the associated probabilities and a churn risk score."
+  },
+  {
+    "id": "q11", "type": "lookup", "answerable": true,
+    "question": "Which tools handle speech-to-text and speaker diarization in the real-time audio pipeline?",
+    "relevant_pages": [67, 68],
+    "evidence": ["Faster-Whisper", "spkrec-ecapa-voxceleb", "Agglomerative Clustering"],
+    "reference_answer": "Speech-to-text uses Faster-Whisper, an optimized CTranslate2 implementation of Whisper. Speaker diarization extracts speaker embeddings with the speechbrain/spkrec-ecapa-voxceleb model and groups segments by speaker using agglomerative clustering."
+  },
+  {
+    "id": "q12", "type": "synthesis", "answerable": true,
+    "question": "How does the system analyse sentiment and emotion during a call?",
+    "relevant_pages": [68, 69],
+    "evidence": ["VADER", "least six words", "librosa", "xlsr-wav2vec"],
+    "reference_answer": "Transcript sentiment uses VADER once at least six words are detected, labelling the text positive, negative or neutral from the compound score. Voice emotion uses librosa to extract pitch, energy and speaking rate, and the harshit345/xlsr-wav2vec-speech-emotion-recognition model to predict emotions. Keyword intensity is combined with text and voice scores into a final score."
+  },
+  {
+    "id": "q13", "type": "synthesis", "answerable": true,
+    "question": "Which LLM does the call-center quality assurance API use, and why was it chosen?",
+    "relevant_pages": [55, 56],
+    "evidence": ["Llama 3", "Ollama", "Data privacy"],
+    "reference_answer": "Llama 3, served locally through Ollama. It was chosen for its high performance, cost-effectiveness (less dependence on cloud APIs), customizable prompts that allow strict JSON output, and data privacy because sensitive customer data does not leave the organization's environment."
+  },
+  {
+    "id": "q14", "type": "lookup", "answerable": true,
+    "question": "What does the quality assurance API return after analysing a transcript?",
+    "relevant_pages": [55],
+    "evidence": ["structured JSON", "complaint classification"],
+    "reference_answer": "Structured JSON output containing QA scores, feedback, complaint classification and conversation summaries."
+  },
+  {
+    "id": "q15", "type": "lookup", "answerable": true,
+    "question": "How does the audio analysis microservice stream audio in real time?",
+    "relevant_pages": [35, 70],
+    "evidence": ["FastAPI-based microservice", "WebSocket"],
+    "reference_answer": "It is a FastAPI microservice that provides WebSocket endpoints for bidirectional real-time audio streaming, returning analysis results as JSON, plus REST endpoints to control the session lifecycle."
+  },
+  {
+    "id": "q16", "type": "lookup", "answerable": true,
+    "question": "What limitations were observed in the real-time audio analysis sprint?",
+    "relevant_pages": [72, 73],
+    "evidence": ["transcript repetition", "diarization"],
+    "reference_answer": "Transcript repetition and occasional inconsistencies in real-time diarization were observed, pointing to further optimization of the text stitching and speaker clustering algorithms."
+  },
+  {
+    "id": "q17", "type": "lookup", "answerable": true,
+    "question": "What future improvements does the conclusion suggest?",
+    "relevant_pages": [119],
+    "evidence": ["multilingual support", "CRM", "predictive analytics"],
+    "reference_answer": "Multilingual support, deeper integration with CRM systems, and advanced predictive analytics."
+  },
+  {
+    "id": "q18", "type": "lookup", "answerable": true,
+    "question": "What non-functional requirements does the platform have?",
+    "relevant_pages": [26],
+    "evidence": ["Performance", "Security", "Scalability"],
+    "reference_answer": "Performance (real-time audio processed with minimal latency), security (protection against unauthorized access and data breaches, using the project's own APIs to keep customer data safe) and scalability (handling growth in users and load without performance degradation)."
+  },
+  {
+    "id": "q19", "type": "lookup", "answerable": true,
+    "question": "What are the drawbacks of Salesforce Service Cloud according to the report?",
+    "relevant_pages": [19],
+    "evidence": ["Very high subscription cost", "Limited churn prediction"],
+    "reference_answer": "Very high subscription cost and limited churn prediction features."
+  },
+  {
+    "id": "u01", "type": "unanswerable", "answerable": false,
+    "question": "What is the capital of Australia?",
+    "relevant_pages": [],
+    "evidence": [],
+    "reference_answer": ""
+  },
+  {
+    "id": "u02", "type": "unanswerable", "answerable": false,
+    "question": "What was the total budget of the project in Tunisian dinars?",
+    "relevant_pages": [],
+    "evidence": [],
+    "reference_answer": ""
+  },
+  {
+    "id": "u03", "type": "unanswerable", "answerable": false,
+    "question": "Which cloud provider hosts the production deployment of the platform?",
+    "relevant_pages": [],
+    "evidence": [],
+    "reference_answer": ""
+  }
+]

@@ -10,3 +10,6 @@ Data/*.pdf
 
 # Local Claude Code config
 .claude/
+
+# Evaluation run outputs
+eval/results/
