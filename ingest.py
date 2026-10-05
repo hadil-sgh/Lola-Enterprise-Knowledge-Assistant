@@ -1,92 +1,111 @@
 """
-Ingestion pipeline: Data/*.txt|*.pdf  ->  chunks (with metadata)  ->  embeddings  ->  FAISS index.
+Ingestion pipeline (offline / batch):
+    Data/*.pdf|*.txt -> pages -> chunks (+metadata) -> embeddings -> FAISS index
 
-This is an offline/batch step. It runs once (or whenever documents change),
-not on every user query -- that's the whole point of building an index.
+Run once, or whenever the documents change -- never per user question.
 """
 import json
+import re
+import sys
+import time
 from pathlib import Path
 
-import faiss
-import numpy as np
-from sentence_transformers import SentenceTransformer
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores.utils import DistanceStrategy
+from langchain_core.documents import Document
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 DATA_DIR = Path("Data")
 INDEX_DIR = Path("index_store")
-CHUNK_SIZE = 800        # target characters per chunk
-CHUNK_OVERLAP = 150     # characters carried from the end of one chunk into the next
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 200
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
+# "Chapter 2 . . . . . . . . 17" style dotted leaders found in tables of contents
+LEADERS = re.compile(r"(?:\s?\.){5,}")
 
-def load_documents(data_dir: Path = DATA_DIR):
-    """Read every .txt/.pdf in data_dir. Returns list of (filename, full_text)."""
-    docs = []
+
+def get_embeddings() -> HuggingFaceEmbeddings:
+    # Unit-length vectors make inner product identical to cosine similarity.
+    return HuggingFaceEmbeddings(
+        model_name=EMBEDDING_MODEL,
+        encode_kwargs={"normalize_embeddings": True},
+    )
+
+
+def load_pages(data_dir: Path = DATA_DIR) -> tuple[list[Document], int]:
+    """One Document per PDF page / text file. Returns (pages, skipped_count)."""
+    pages: list[Document] = []
+    skipped = 0
     for path in sorted(data_dir.glob("*")):
-        if path.suffix.lower() == ".txt":
-            docs.append((path.name, path.read_text(encoding="utf-8")))
-        elif path.suffix.lower() == ".pdf":
-            from pypdf import PdfReader
-            reader = PdfReader(str(path))
-            text = "\n\n".join(page.extract_text() or "" for page in reader.pages)
-            docs.append((path.name, text))
-    return docs
-
-
-def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP):
-    """Pack whole paragraphs into ~chunk_size windows, carrying `overlap`
-    characters of context from one chunk into the next."""
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
-    chunks = []
-    current = ""
-    for para in paragraphs:
-        if current and len(current) + len(para) + 2 > chunk_size:
-            chunks.append(current)
-            current = current[-overlap:] + "\n\n" + para
+        suffix = path.suffix.lower()
+        if suffix == ".pdf":
+            loaded = PyPDFLoader(str(path)).load()
+        elif suffix == ".txt":
+            loaded = TextLoader(str(path), encoding="utf-8").load()
         else:
-            current = f"{current}\n\n{para}" if current else para
-    if current:
-        chunks.append(current)
+            continue
+        for doc in loaded:
+            text = doc.page_content
+            # skip blank pages and TOC / list-of-figures pages: they only add noise
+            if len(text.strip()) < 50 or len(LEADERS.findall(text)) >= 8:
+                skipped += 1
+                continue
+            page_no = int(doc.metadata.get("page", 0)) + 1  # 1-based for humans
+            doc.metadata = {"source": path.name, "page": page_no}  # drop PDF producer/creator noise
+            pages.append(doc)
+    return pages, skipped
+
+
+def split_pages(pages: list[Document]) -> list[Document]:
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP, add_start_index=True
+    )
+    chunks = splitter.split_documents(pages)
+    for i, chunk in enumerate(chunks):
+        chunk.metadata["chunk_id"] = i
     return chunks
 
 
-def build_chunks(data_dir: Path = DATA_DIR):
-    """Turn every document in data_dir into chunk dicts with traceable metadata."""
-    all_chunks = []
-    for filename, text in load_documents(data_dir):
-        for i, chunk in enumerate(chunk_text(text)):
-            all_chunks.append({
-                "chunk_id": f"{filename}::{i}",
-                "doc_id": filename,
-                "source_filename": filename,
-                "position": i,
-                "text": chunk,
-            })
-    return all_chunks
+def ingest(data_dir: Path = DATA_DIR, index_dir: Path = INDEX_DIR) -> dict:
+    start = time.time()
+    pages, skipped = load_pages(data_dir)
+    if not pages:
+        raise RuntimeError(f"No usable .pdf/.txt content found in {data_dir}/")
+    chunks = split_pages(pages)
 
-
-def embed_and_index(chunks: list[dict], index_dir: Path = INDEX_DIR):
-    """Embed each chunk and build a flat (exact-search) FAISS index over the vectors."""
-    model = SentenceTransformer(EMBEDDING_MODEL)
-    texts = [c["text"] for c in chunks]
-
-    # normalize_embeddings=True makes inner product == cosine similarity,
-    # which is what IndexFlatIP computes.
-    embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=True)
-    embeddings = np.asarray(embeddings, dtype="float32")
-
-    index = faiss.IndexFlatIP(embeddings.shape[1])
-    index.add(embeddings)
-
+    store = FAISS.from_documents(
+        chunks, get_embeddings(), distance_strategy=DistanceStrategy.MAX_INNER_PRODUCT
+    )
     index_dir.mkdir(exist_ok=True)
-    faiss.write_index(index, str(index_dir / "faiss.index"))
-    with open(index_dir / "chunks.json", "w", encoding="utf-8") as f:
-        json.dump(chunks, f, indent=2)
+    store.save_local(str(index_dir))
 
-    return index
+    # plain-JSON copy: used to build the BM25 keyword index, and easy to inspect by hand
+    (index_dir / "chunks.json").write_text(
+        json.dumps(
+            [{"text": c.page_content, "metadata": c.metadata} for c in chunks],
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "files": sorted({p.metadata["source"] for p in pages}),
+        "pages_indexed": len(pages),
+        "pages_skipped": skipped,
+        "chunks": len(chunks),
+        "seconds": round(time.time() - start, 1),
+    }
 
 
 if __name__ == "__main__":
-    chunks = build_chunks()
-    print(f"Built {len(chunks)} chunks from {len(list(DATA_DIR.glob('*')))} file(s) in {DATA_DIR}/")
-    embed_and_index(chunks)
-    print(f"Embedded and indexed {len(chunks)} chunks -> {INDEX_DIR}/faiss.index + {INDEX_DIR}/chunks.json")
+    sys.stdout.reconfigure(encoding="utf-8")
+    pages, skipped = load_pages()
+    chunks = split_pages(pages)
+    print(f"Loaded {len(pages)} pages ({skipped} skipped as blank / table-of-contents)")
+    print(f"Divided into {len(chunks)} chunks")
+    print(f"First chunk:\n\n{chunks[0]}\n")
+    print("Embedding + indexing ...")
+    print(ingest())
