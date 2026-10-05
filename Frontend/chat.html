@@ -257,7 +257,7 @@ async function loadStatus() {
   try { state.status = await (await fetch("/api/status")).json(); } catch { state.status = null; }
   const s = state.status, idx = s && s.index, ol = s && s.ollama;
   $("idxDot").className = "dot " + (idx ? "ok" : "warn");
-  $("idxText").textContent = idx ? `${idx.chunks} chunks indexed` : "No index yet";
+  $("idxText").textContent = idx ? `${idx.chunks} chunks indexed${idx.chunking ? " · " + idx.chunking : ""}` : "No index yet";
   $("docName").textContent = idx ? idx.files.join(", ") : "No document indexed";
   $("llmDot").className = "dot " + (ol && ol.ok ? "ok" : "err");
   $("llmText").textContent = ol && ol.ok ? "Ollama connected" : "Ollama unreachable";
