@@ -1,0 +1,33 @@
+# Default: the app container talks to the Ollama already running on your machine (keeps your GPU).
+#   docker compose up --build
+#
+# Self-contained alternative: also run Ollama in a container (CPU only unless you add GPU settings).
+#   OLLAMA_HOST=http://ollama:11434 docker compose --profile with-ollama up --build
+#   docker compose exec ollama ollama pull llama3.2:3b
+services:
+  lola:
+    build: .
+    image: lola-assistant
+    ports:
+      - "127.0.0.1:8000:8000"        # loopback only: the app has no authentication
+    environment:
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      CHUNKING: ${CHUNKING:-recursive}   # recursive | semantic (used when the index is built)
+    volumes:
+      - ./Data:/app/Data:ro
+      - index:/app/index_store
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # makes host.docker.internal work on Linux too
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    profiles: ["with-ollama"]
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  index:
+  ollama:

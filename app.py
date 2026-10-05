@@ -14,6 +14,7 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -136,4 +137,5 @@ def document(filename: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="127.0.0.1", port=8000)
+    # loopback by default (the app has no login); the container sets HOST=0.0.0.0 and publishes 127.0.0.1 only
+    uvicorn.run("app:app", host=os.getenv("HOST", "127.0.0.1"), port=int(os.getenv("PORT", "8000")))

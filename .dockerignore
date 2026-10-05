@@ -1,0 +1,16 @@
+venv/
+.git/
+.claude/
+__pycache__/
+*.pyc
+.env
+
+# mounted or generated at runtime, never baked into the image
+Data/
+index_store/
+index_*/
+eval/results/
+
+docs/
+README.md
+Rag-learning-plan.md
