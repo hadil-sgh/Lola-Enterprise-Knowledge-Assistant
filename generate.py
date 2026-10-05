@@ -53,7 +53,7 @@ def stream_answer(question: str, chunks: list[dict], model: str = DEFAULT_MODEL)
 def list_models() -> dict:
     """Chat-capable models installed in Ollama (embedding models are filtered out)."""
     try:
-        listing = ollama.Client(host=OLLAMA_HOST).list()
+        listing = ollama.Client(host=OLLAMA_HOST, timeout=3).list()
         names = sorted(m.model for m in listing.models if "embed" not in m.model)
         return {"ok": True, "models": names, "default": DEFAULT_MODEL}
     except Exception as exc:  # Ollama not running / unreachable
